@@ -61,16 +61,27 @@ def annotate_pdf():
         if not success:
             return jsonify({'error': 'Failed to annotate PDF'}), 500
         
-        # Send the annotated file
-        return send_file(output_path, 
+        # Read the annotated file content
+        with open(output_path, 'rb') as f:
+            pdf_content = f.read()
+        
+        # Clean up temporary files immediately
+        os.unlink(input_path)
+        os.unlink(output_path)
+        
+        # Return the PDF content from memory
+        from io import BytesIO
+        return send_file(BytesIO(pdf_content), 
                         mimetype='application/pdf',
                         as_attachment=True,
                         download_name=f'annotated_{file.filename}')
-    finally:
-        # Clean up temporary files
+    except Exception as e:
+        # Clean up temporary files on error
         if os.path.exists(input_path):
             os.unlink(input_path)
-        # Note: output_path cleanup happens after send_file completes
+        if os.path.exists(output_path):
+            os.unlink(output_path)
+        return jsonify({'error': f'Failed to process PDF: {str(e)}'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
